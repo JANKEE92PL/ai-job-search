@@ -92,7 +92,13 @@ For each promising result from Step 1:
 **From CLI results:** Search output already includes title, company, location, date,
 and URL. For jobs worth a deeper look, fetch full detail with that portal's `detail`
 command (see its SKILL.md — do not guess flags) to extract **key requirements**,
-**application deadline**, and a brief description snippet.
+**application deadline**, **salary** (when stated), and a brief description snippet.
+
+**Salary:** take it from the portal's own `salary` field when its `detail` output has
+one (freehire does), otherwise only from an explicit statement in the posting text
+(e.g. "Gehalt: 60.000 - 80.000 Euro", "Entgeltgruppe 10 TV-L") or in the title. Keep
+the stated period and unit. Never estimate a salary from seniority, market data or
+the company - an absent statement stays absent.
 
 **Closed-at-source detection:** `linkedin-search detail` also returns `isActive`.
 `false` means the posting page itself renders LinkedIn's "No longer accepting
@@ -156,10 +162,12 @@ It prints one line: the canonical key for that posting. The key must be a pure f
     "<key from tools/job_key.py>": {
       "title": "...",
       "company": "...",
+      "location": "..." | null,
       "url": "...",
       "first_seen": "YYYY-MM-DD",
       "posted_date": "YYYY-MM-DD" | null,
       "deadline": "YYYY-MM-DD" | null,
+      "salary": "<as stated, e.g. 60.000–80.000 € p.a.>" | null,
       "fit": "high/medium/low",
       "status": "new/skipped/ranked/expired/unreachable",
       "portal": "<source portal skill, e.g. jobindex-search>",
@@ -168,6 +176,8 @@ It prints one line: the canonical key for that posting. The key must be a pure f
   }
 }
 ```
+
+`location` is the place string from the portal's search output (what `tools/jobs_board.py` shows); `salary` is what Step 2 extracted, `null` when the posting states none. Both are display fields - never infer either.
 
 The `portal` field records which CLI skill produced the job (results are already tagged per portal in Step 1b - persist that tag here). Entries written before this field existed lack it; the health check (Step 4.75) attributes those by matching the URL's domain against each portal's base URL, so do not backfill.
 
@@ -267,6 +277,14 @@ LinkedIn search links:
 - Recruiters/TA search link, for the referral path
 - Role/team-peer search link, for the warm-intro / informational-outreach path
 ```
+
+Then regenerate the job board and open it in the browser:
+
+```bash
+python3 tools/jobs_board.py --open
+```
+
+It rewrites `reports/jobs-board.html` (git-ignored) from `job_scraper/seen_jobs.json` with a generation timestamp. If it fails, report the error in one line and continue - the board is a convenience, not part of the scrape.
 
 After presenting, ask:
 > "Want me to evaluate any of these in detail? Just give me the number(s)."
